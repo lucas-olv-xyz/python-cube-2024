@@ -1,12 +1,13 @@
 import pygame
 import numpy as np
 
-# Set up the Pygame window
+# Inicializar o Pygame
 pygame.init()
 window_size = (600, 600)
 screen = pygame.display.set_mode(window_size)
+pygame.display.set_caption("Rotating Cube")
 
-# Define the vertices of the cube
+# Definir os vértices do cubo
 vertices = np.array([[-1, -1, -1],
                      [1, -1, -1],
                      [1, 1, -1],
@@ -16,7 +17,7 @@ vertices = np.array([[-1, -1, -1],
                      [1, 1, 1],
                      [-1, 1, 1]])
 
-# Define the edges of the cube
+# Definir as arestas do cubo
 edges = np.array([[0, 1],
                   [1, 2],
                   [2, 3],
@@ -30,33 +31,57 @@ edges = np.array([[0, 1],
                   [2, 6],
                   [3, 7]])
 
-# Set up the camera
-fov = np.pi / 2
-camera_distance = 2
+# Configurar a câmera
+camera_distance = 5
 
-# Set up the rotation angle
+# Configurar o ângulo de rotação
 angle = 0
 
-while True:
-    # Clear the screen
+# Função para projetar os vértices 3D para 2D
+def project(vertices, camera_distance, window_size):
+    # Evitar divisão por zero
+    with np.errstate(divide='ignore', invalid='ignore'):
+        projected_vertices = vertices / (vertices[:, 2].reshape(-1, 1) + camera_distance)
+        projected_vertices = projected_vertices[:, :2] * min(window_size) / 2
+        projected_vertices += np.array(window_size) / 2
+    
+    # Substituir valores infinitos e NaN por zero
+    projected_vertices = np.nan_to_num(projected_vertices)
+    return projected_vertices.astype(int)
+
+# Loop principal
+running = True
+clock = pygame.time.Clock()
+FPS = 30
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Limpar a tela
     screen.fill((0, 0, 0))
 
-    # Rotate the vertices
-    rotated_vertices = vertices.dot(np.array([[np.cos(angle), 0, np.sin(angle)],
-                                              [0, 1, 0],
-                                              [-np.sin(angle), 0, np.cos(angle)]]))
+    # Rotacionar os vértices
+    rotation_matrix = np.array([[np.cos(angle), 0, np.sin(angle)],
+                                [0, 1, 0],
+                                [-np.sin(angle), 0, np.cos(angle)]])
+    rotated_vertices = vertices.dot(rotation_matrix.T)
 
-    # Project the vertices onto the 2D screen
-    projected_vertices = rotated_vertices / rotated_vertices[:, 2:] * camera_distance
+    # Projetar os vértices na tela 2D
+    projected_vertices = project(rotated_vertices, camera_distance, window_size)
 
-    # Draw the edges
+    # Desenhar as arestas
     for edge in edges:
-        start = (int(round(projected_vertices[edge[0]][0] + window_size[0] / 2)), int(round(projected_vertices[edge[0]][1] + window_size[1] / 2)))
-        end = (int(round(projected_vertices[edge[1]][0] + window_size[0] / 2)), int(round(projected_vertices[edge[1]][1] + window_size[1] / 2)))
+        start, end = projected_vertices[edge]
         pygame.draw.line(screen, (255, 255, 255), start, end, 1)
 
-    # Update the rotation angle
+    # Atualizar o ângulo de rotação
     angle += np.pi / 180
+    if angle >= 2 * np.pi:
+        angle -= 2 * np.pi
 
-    # Update the screen
+    # Atualizar a tela
     pygame.display.flip()
+    clock.tick(FPS)
+
+pygame.quit()
