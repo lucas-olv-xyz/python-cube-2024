@@ -53,6 +53,7 @@ def project(vertices, camera_distance, window_size):
 running = True
 clock = pygame.time.Clock()
 FPS = 30
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
